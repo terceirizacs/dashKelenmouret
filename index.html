@@ -644,12 +644,76 @@ function renderAll(rows){
   h3+='</div></div>';}
   }
 
+  // Financeiro - 5 cards
+  const f={compras_n:0,compras_v:0,reembolso_n:0,reembolso_v:0,chargeback_n:0,chargeback_v:0,cancelado_n:0,cancelado_v:0};
+  rows.forEach(r=>{
+    const s=(r[R.STATUS_COMPRA]||'').toUpperCase();const v=r[R.VALOR]||0;
+    if(s==='COMPLETE'||s==='APPROVED'||s==='COMPLETO'||s==='APROVADO'){f.compras_n++;f.compras_v+=v;}
+    if(s==='REFUNDED'||s==='REEMBOLSADO'){f.reembolso_n++;f.reembolso_v+=v;}
+    if(s==='CHARGEBACK'){f.chargeback_n++;f.chargeback_v+=v;}
+    if(s==='CANCELLED'||s==='CANCELADO'){f.cancelado_n++;f.cancelado_v+=v;}
+  });
+  const perda=f.reembolso_v+f.chargeback_v+f.cancelado_v;
+  const pctPerda=f.compras_v>0?perda/f.compras_v*100:0;
+  const pctReemb=f.compras_v>0?f.reembolso_v/f.compras_v*100:0;
+  const ttx=f.compras_n+f.reembolso_n+f.chargeback_n+f.cancelado_n;
+
+  h3+='<div class="sec">💰 Financeiro</div><div class="g5">';
+  h3+='<div class="fin"><div class="fin-icon">💳</div><div class="fin-val" style="color:var(--green)">'+fmtR(f.compras_v)+'</div><div class="fin-label">Receita de Vendas</div><div class="fin-sub">'+f.compras_n+' compras</div></div>';
+  h3+='<div class="fin"><div class="fin-icon">↩️</div><div class="fin-val" style="color:var(--red)">'+fmtR(f.reembolso_v)+'</div><div class="fin-label">Reembolsos</div><div class="fin-sub">'+f.reembolso_n+' · '+fmtP(pctReemb)+'</div></div>';
+  if(f.chargeback_n>0)h3+='<div class="fin"><div class="fin-icon">⚠️</div><div class="fin-val" style="color:var(--orange)">'+fmtR(f.chargeback_v)+'</div><div class="fin-label">Chargebacks</div><div class="fin-sub">'+f.chargeback_n+'</div></div>';
+  if(f.cancelado_n>0)h3+='<div class="fin"><div class="fin-icon">🚫</div><div class="fin-val" style="color:var(--pink)">'+fmtR(f.cancelado_v)+'</div><div class="fin-label">Cancelamentos</div><div class="fin-sub">'+f.cancelado_n+'</div></div>';
+  h3+='<div class="fin"><div class="fin-icon">📉</div><div class="fin-val" style="color:var(--red)">'+fmtR(perda)+'</div><div class="fin-label">Perda Total</div><div class="fin-sub">'+fmtP(rd(pctPerda))+' da receita</div></div></div>';
+
+  // Compras vs Perdas
+  const mxFin=Math.max(f.compras_v,perda,1);
+  h3+='<div class="g2" style="margin-top:24px"><div class="card"><h3>Compras vs Perdas</h3><div class="d">Comparativo financeiro</div><div class="chart"><div class="chart-bars"><div class="bar" style="height:95%;background:var(--green);flex:2"><span class="tt">Vendas: '+fmtR(f.compras_v)+'</span></div><div class="bar" style="height:'+Math.round(perda/mxFin*95)+'%;background:var(--red);flex:1"><span class="tt">Perdas: '+fmtR(perda)+'</span></div></div><div class="chart-labels"><div class="chart-lbl" style="flex:2">Vendas ('+fmtR(f.compras_v)+')</div><div class="chart-lbl" style="flex:1">Perdas ('+fmtR(perda)+')</div></div></div></div>';
+  h3+='<div class="card"><h3>Status Transações</h3><div class="d">Distribuição</div><div class="hbar-area"><div class="hbar-row"><span class="hbar-lbl">Aprovadas</span><div class="hbar-track"><div class="hbar-fill" style="width:'+(ttx>0?Math.round(f.compras_n/ttx*100):0)+'%;background:var(--green)">'+f.compras_n+'</div></div></div><div class="hbar-row"><span class="hbar-lbl">Reembolsos</span><div class="hbar-track"><div class="hbar-fill" style="width:'+(ttx>0?Math.max(Math.round(f.reembolso_n/ttx*100),2):0)+'%;background:var(--red)">'+f.reembolso_n+'</div></div></div></div></div></div>';
+
+  // Reembolso tendência
+  const recV=f.compras_v||1;
+  h3+='<div class="sec">📉 Reembolso — Tendência</div><div class="g3">';
+  [[a.reemb30,'30 dias','var(--green)'],[a.reemb60,'60 dias','var(--gold)'],[a.reemb90,'90 dias','var(--red)']].forEach(([rb,label,color])=>{
+    const pct=rd(recV>0?rb.v/recV*100:0);
+    h3+='<div class="trend-card" style="border-top:4px solid '+color+'"><div style="font-size:14px;font-weight:600;color:var(--t2)">Últimos '+label+'</div><div style="font-size:13px;color:var(--t3)">reembolsos no período</div><div class="trend-val" style="color:'+color+'">'+rb.n+'</div><div class="trend-money" style="color:'+color+'">'+fmtR(rb.v)+'</div><span class="trend-pct" style="background:'+color+'22;color:'+color+'">'+fmtP(pct)+' da receita</span></div>';
+  });h3+='</div>';
+
+  // Cross-sell: Curso → Produto Físico
+  const allCurso=new Set(),allPF=new Set(),progCurso={};
+  RAW_DATA.forEach(r=>{
+    if(r[R.EMAIL]){
+      if(r[R.PRODUTO]==='RegenX 🇫🇷'||r[R.PRODUTO]==='RegenX 🇪🇸'){
+        allCurso.add((r[R.EMAIL]||'').toString().toLowerCase().trim());
+        if(r[R.PROG]!==null&&r[R.PROG]!==''){
+          const eml=(r[R.EMAIL]||'').toString().toLowerCase().trim();const prev=progCurso[eml];
+          if(prev===undefined||Number(r[R.PROG])>prev)progCurso[eml]=Number(r[R.PROG]);
+        }
+      }
+    }
+  });
+  // Check PF buyers from PF_DATA
+  if(window.PF_DATA){window.PF_DATA.forEach(r=>{const e=(r[4]||'').toString().toLowerCase().trim();if(e)allPF.add(e);});}
+  let crossPF=0;const crossPFprogs=[];
+  allPF.forEach(e=>{if(allCurso.has(e)){crossPF++;if(progCurso[e]!==undefined)crossPFprogs.push(progCurso[e]);}});
+  const cursoT=allCurso.size;const potencial=cursoT-crossPF;const pctPot=cursoT>0?rd(potencial/cursoT*100):0;
+  const avgCrossPF=crossPFprogs.length?rd(avg(crossPFprogs)):0;
+
+  h3+='<div class="sec">🔄 Oportunidade: Curso → Produto Físico</div><div class="g2">';
+  h3+='<div class="rc"><h3>Cross-sell Curso → Produto Físico <span class="rc-badge conv">Conversão</span></h3>';
+  h3+='<div class="rc-row"><span class="rc-l">Alunos do curso que compraram prod. físico</span><span class="rc-v" style="color:var(--teal)">'+crossPF+'</span></div>';
+  h3+='<div class="rc-row"><span class="rc-l">% de cross-sell</span><span class="rc-v" style="color:var(--teal)">'+fmtP(cursoT>0?rd(crossPF/cursoT*100):0)+'</span></div>';
+  h3+='<div class="rc-potencial"><span class="rc-l">Potencial restante</span><span class="rc-v" style="color:var(--gold)">'+fmtN(potencial)+' <small style="font-size:12px;font-weight:400;color:var(--t2)">('+fmtP(pctPot)+')</small></span></div></div>';
+  h3+='<div class="rc" style="background:linear-gradient(135deg,var(--card) 0%,rgba(45,212,191,.04) 100%);border-color:rgba(45,212,191,.15)"><h3 style="color:var(--teal)">Perfil do comprador de Prod. Físico <span class="rc-badge perf">Perfil</span></h3>';
+  h3+='<div class="rc-row"><span class="rc-l">Progresso médio no curso</span><span class="rc-v" style="color:var(--teal)">'+fmtP(avgCrossPF)+'</span></div>';
+  h3+='<div class="rc-row"><span class="rc-l">Compradores únicos (prod. físico)</span><span class="rc-v" style="color:var(--teal)">'+fmtN(allPF.size)+'</span></div>';
+  h3+='</div></div>';
+
   // Insights Financeiro
   h3+='<div class="sec">💡 Insights — Financeiro</div><div class="ins-g">';
   if(a.reemb30.n===0)h3+='<div class="ins ok"><div class="ins-t">✅ 0 reembolsos nos últimos 30 dias</div><div class="ins-p">Tendência estável.</div></div>';
   else h3+='<div class="ins w"><div class="ins-t">⚠️ '+a.reemb30.n+' reembolso(s) nos últimos 30 dias</div><div class="ins-p">'+fmtR(a.reemb30.v)+' de impacto recente.</div></div>';
   if(pctReemb>15)h3+='<div class="ins w"><div class="ins-t">🚨 Reembolso: '+fmtP(pctReemb)+'</div><div class="ins-p">'+f.reembolso_n+' reembolsos · '+fmtR(f.reembolso_v)+' de impacto.</div></div>';
-  if(pctPot>50)h3+='<div class="ins i"><div class="ins-t">⚡ '+fmtP(pctPot)+' da base RegenX FR ainda não comprou a Mentoria</div><div class="ins-p">'+fmtN(potencial)+' alunos potenciais para cross-sell.</div></div>';
+  if(pctPot>50)h3+='<div class="ins i"><div class="ins-t">⚡ '+fmtP(pctPot)+' da base de cursos ainda não comprou Produto Físico</div><div class="ins-p">'+fmtN(potencial)+' alunos potenciais para produto físico.</div></div>';
   h3+='</div>';
   document.getElementById('contentFinanceiro').innerHTML=h3;
 }
