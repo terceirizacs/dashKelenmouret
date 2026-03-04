@@ -453,17 +453,17 @@ function aggregate(rows){
       if(prev===undefined||r[R.PROG]>prev)a.progPorEmail[r[R.EMAIL]][r[R.PRODUTO]]=r[R.PROG];
     }
     if(r[R.VALOR]>0&&r[R.STATUS_COMPRA]){
-      if(r[R.STATUS_COMPRA]==='COMPLETE'||r[R.STATUS_COMPRA]==='APPROVED'||r[R.STATUS_COMPRA]==='Completo'||r[R.STATUS_COMPRA]==='Aprovado'){a.fin.compras_v+=r[R.VALOR];a.fin.compras_n++;}
+      if(r[R.STATUS_COMPRA]==='COMPLETE'||r[R.STATUS_COMPRA]==='APPROVED'||r[R.STATUS_COMPRA]==='Completo'||r[R.STATUS_COMPRA]==='Aprovado'){a.f.compras_v+=r[R.VALOR];a.f.compras_n++;}
       else if((r[R.STATUS_COMPRA]==='REFUNDED'||r[R.STATUS_COMPRA]==='Reembolsado')){
-        a.fin.reembolso_v+=r[R.VALOR];a.fin.reembolso_n++;
+        a.f.reembolso_v+=r[R.VALOR];a.f.reembolso_n++;
         if(r[R.DT_APROV]){
           if(r[R.DT_APROV]>=d30){a.reemb30.n++;a.reemb30.v+=r[R.VALOR];}
           if(r[R.DT_APROV]>=d60m){a.reemb60.n++;a.reemb60.v+=r[R.VALOR];}
           if(r[R.DT_APROV]>=d90){a.reemb90.n++;a.reemb90.v+=r[R.VALOR];}
         }
       }
-      else if(r[R.STATUS_COMPRA]==='CHARGEBACK'){a.fin.chargeback_v+=r[R.VALOR];a.fin.chargeback_n++;}
-      else if(r[R.STATUS_COMPRA]==='CANCELLED'){a.fin.cancelado_v+=r[R.VALOR];a.fin.cancelado_n++;}
+      else if(r[R.STATUS_COMPRA]==='CHARGEBACK'){a.f.chargeback_v+=r[R.VALOR];a.f.chargeback_n++;}
+      else if(r[R.STATUS_COMPRA]==='CANCELLED'){a.f.cancelado_v+=r[R.VALOR];a.f.cancelado_n++;}
     }
   });
   return a;
@@ -644,19 +644,6 @@ function renderAll(rows){
   h3+='</div></div>';}
   }
 
-  // Financeiro - 5 cards
-  const f={compras_n:0,compras_v:0,reembolso_n:0,reembolso_v:0,chargeback_n:0,chargeback_v:0,cancelado_n:0,cancelado_v:0};
-  rows.forEach(r=>{
-    const s=(r[R.STATUS_COMPRA]||'').toUpperCase();const v=r[R.VALOR]||0;
-    if(s==='COMPLETE'||s==='APPROVED'||s==='COMPLETO'||s==='APROVADO'){f.compras_n++;f.compras_v+=v;}
-    if(s==='REFUNDED'||s==='REEMBOLSADO'){f.reembolso_n++;f.reembolso_v+=v;}
-    if(s==='CHARGEBACK'){f.chargeback_n++;f.chargeback_v+=v;}
-    if(s==='CANCELLED'||s==='CANCELADO'){f.cancelado_n++;f.cancelado_v+=v;}
-  });
-  const perda=f.reembolso_v+f.chargeback_v+f.cancelado_v;
-  const pctPerda=f.compras_v>0?perda/f.compras_v*100:0;
-  const pctReemb=f.compras_v>0?f.reembolso_v/f.compras_v*100:0;
-  const ttx=f.compras_n+f.reembolso_n+f.chargeback_n+f.cancelado_n;
 
   h3+='<div class="sec">💰 Financeiro</div><div class="g5">';
   h3+='<div class="fin"><div class="fin-icon">💳</div><div class="fin-val" style="color:var(--green)">'+fmtR(f.compras_v)+'</div><div class="fin-label">Receita de Vendas</div><div class="fin-sub">'+f.compras_n+' compras</div></div>';
