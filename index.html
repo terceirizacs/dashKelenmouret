@@ -642,6 +642,7 @@ function renderAll(rows){
     h3+='<div class="hbar-row"><span class="hbar-lbl">'+name.replace(/[🇫🇷🇪🇸]/g,'').trim()+'</span><div class="hbar-track"><div class="hbar-fill" style="width:'+pctW+'%;background:'+fatColors[i%fatColors.length]+'">'+fmtR(val)+' ('+fmtP(val/fatTotal*100)+')</div></div></div>';
   });
   h3+='</div></div>';}
+  }
 
   // Insights Financeiro
   h3+='<div class="sec">💡 Insights — Financeiro</div><div class="ins-g">';
