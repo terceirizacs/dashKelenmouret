@@ -425,7 +425,7 @@ function aggregate(rows){
   const a={total:rows.length,funil:{},faixaProg:{},faixaDias:{},tipoAluno:{},progVals:[],acessosMes:[],acessou:0,nuncaAcessou:0,
     ativos:0,bloqueados:0,aulasComp:{sm:[],sv:[]},totalAulas:{sm:[],sv:[]},
     fin:{compras_v:0,compras_n:0,reembolso_v:0,reembolso_n:0,chargeback_v:0,chargeback_n:0,cancelado_v:0,cancelado_n:0},
-    emails:{sm:new Set(),sv:new Set()},progPorEmail:{},
+    emails:{p1:new Set(),p2:new Set(),p3:new Set(),p4:new Set()},progPorEmail:{},
     reemb30:{n:0,v:0},reemb60:{n:0,v:0},reemb90:{n:0,v:0},
     produtos:new Set()};
   const d30=TODAY_MS-30*86400000,d60m=TODAY_MS-60*86400000,d90=TODAY_MS-90*86400000;
@@ -444,9 +444,9 @@ function aggregate(rows){
     if(r[R.ACESSOU])a.acessou++;else a.nuncaAcessou++;
     if(r[R.ULT_ACESSO]){const d=Math.floor((TODAY_MS-r[R.ULT_ACESSO])/86400000);if(d>=0){const fd=d<=14?'0-14d':d<=30?'15-30d':d<=60?'31-60d':'>60d';a.faixaDias[fd]=(a.faixaDias[fd]||0)+1;}}
     const pKey={'RegenX 🇫🇷':'p1','RegenX 🇪🇸':'p2','Insta Magnétik 🇫🇷':'p3','Insta Magnétik 🇪🇸':'p4'}[r[R.PRODUTO]]||'p1';
-    if(r[R.AULAS]!==null)a.aulasComp[pKey].push(r[R.AULAS]);
-    if(r[R.TOTAL_AULAS]!==null)a.totalAulas[pKey].push(r[R.TOTAL_AULAS]);
-    if(r[R.EMAIL])a.emails[pKey].add(r[R.EMAIL]);
+    if(r[R.AULAS]!==null&&r[R.AULAS]!==''&&pKey)a.aulasComp[pKey].push(Number(r[R.AULAS])||0);
+    if(r[R.TOTAL_AULAS]!==null&&r[R.TOTAL_AULAS]!==''&&pKey)a.totalAulas[pKey].push(Number(r[R.TOTAL_AULAS])||0);
+    if(r[R.EMAIL]&&pKey&&a.emails[pKey])a.emails[pKey].add(r[R.EMAIL]);
     if(r[R.EMAIL]&&r[R.PROG]!==null){
       if(!a.progPorEmail[r[R.EMAIL]])a.progPorEmail[r[R.EMAIL]]={};
       const prev=a.progPorEmail[r[R.EMAIL]][r[R.PRODUTO]];
