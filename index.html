@@ -434,16 +434,16 @@ function aggregate(rows){
     if(r[R.STATUS_CLUB]==='ACTIVE')a.ativos++;else a.bloqueados++;
     if(r[R.FUNIL])a.funil[r[R.FUNIL]]=(a.funil[r[R.FUNIL]]||0)+1;
     if(r[R.TIPO_ALUNO])a.tipoAluno[r[R.TIPO_ALUNO]]=(a.tipoAluno[r[R.TIPO_ALUNO]]||0)+1;
-    if(r[R.PROG]!==null){
-      a.progVals.push(r[R.PROG]);
+    if(r[R.PROG]!==null&&r[R.PROG]!==''&&!isNaN(Number(r[R.PROG]))){
+      a.progVals.push(Number(r[R.PROG]));
       const p=r[R.PROG];
       const fp=p===0?'0':p<=10?'1-10':p<=20?'11-20':p<=30?'21-30':p<=40?'31-40':p<=50?'41-50':p<=60?'51-60':p<=70?'61-70':p<=80?'71-80':p<=90?'81-90':'91-100';
       a.faixaProg[fp]=(a.faixaProg[fp]||0)+1;
     }
-    if(r[R.QTD_ACESSOS]>=0&&r[R.DT_COMPRA]){const dd=Math.max(Math.floor((TODAY_MS-r[R.DT_COMPRA])/86400000),1);a.acessosMes.push(r[R.QTD_ACESSOS]/Math.max(dd/30,1));}
+    if(r[R.QTD_ACESSOS]!==''&&r[R.QTD_ACESSOS]!==null&&Number(r[R.QTD_ACESSOS])>=0&&r[R.DT_COMPRA]){const dd=Math.max(Math.floor((TODAY_MS-r[R.DT_COMPRA])/86400000),1);a.acessosMes.push(r[R.QTD_ACESSOS]/Math.max(dd/30,1));}
     if(r[R.ACESSOU])a.acessou++;else a.nuncaAcessou++;
     if(r[R.ULT_ACESSO]){const d=Math.floor((TODAY_MS-r[R.ULT_ACESSO])/86400000);if(d>=0){const fd=d<=14?'0-14d':d<=30?'15-30d':d<=60?'31-60d':'>60d';a.faixaDias[fd]=(a.faixaDias[fd]||0)+1;}}
-    const pKey=r[R.PRODUTO]==='RegenX 🇫🇷'?'sm':'sv';
+    const pKey={'RegenX 🇫🇷':'p1','RegenX 🇪🇸':'p2','Insta Magnétik 🇫🇷':'p3','Insta Magnétik 🇪🇸':'p4'}[r[R.PRODUTO]]||'p1';
     if(r[R.AULAS]!==null)a.aulasComp[pKey].push(r[R.AULAS]);
     if(r[R.TOTAL_AULAS]!==null)a.totalAulas[pKey].push(r[R.TOTAL_AULAS]);
     if(r[R.EMAIL])a.emails[pKey].add(r[R.EMAIL]);
@@ -453,8 +453,8 @@ function aggregate(rows){
       if(prev===undefined||r[R.PROG]>prev)a.progPorEmail[r[R.EMAIL]][r[R.PRODUTO]]=r[R.PROG];
     }
     if(r[R.VALOR]>0&&r[R.STATUS_COMPRA]){
-      if(r[R.STATUS_COMPRA]==='COMPLETE'||r[R.STATUS_COMPRA]==='APPROVED'){a.fin.compras_v+=r[R.VALOR];a.fin.compras_n++;}
-      else if(r[R.STATUS_COMPRA]==='REFUNDED'){
+      if(r[R.STATUS_COMPRA]==='COMPLETE'||r[R.STATUS_COMPRA]==='APPROVED'||r[R.STATUS_COMPRA]==='Completo'||r[R.STATUS_COMPRA]==='Aprovado'){a.fin.compras_v+=r[R.VALOR];a.fin.compras_n++;}
+      else if((r[R.STATUS_COMPRA]==='REFUNDED'||r[R.STATUS_COMPRA]==='Reembolsado')){
         a.fin.reembolso_v+=r[R.VALOR];a.fin.reembolso_n++;
         if(r[R.DT_APROV]){
           if(r[R.DT_APROV]>=d30){a.reemb30.n++;a.reemb30.v+=r[R.VALOR];}
@@ -492,7 +492,7 @@ function renderAll(rows){
   h1+=kpiCard('linear-gradient(90deg,var(--accent),var(--a2))','Total Alunos',fmtN(a.total),'','var(--a2)');
   h1+=kpiCard('linear-gradient(90deg,var(--teal),var(--green))','Média Progresso',fmtP(avgProg),'','var(--teal)');
   h1+=kpiCard('linear-gradient(90deg,var(--sky),var(--cyan))','Acessos / Mês',avgAcsMes.toFixed(1).replace('.',','),'média mensal','var(--sky)');
-  h1+=kpiCard('linear-gradient(90deg,var(--red),var(--pink))','Nunca Acessaram',fmtP(pctNunca),a.nuncaAcessou+' alunos','var(--red)');
+  const recompraN=a.funil['Recompra']||0;const pctRecompra=a.total>0?rd(recompraN/a.total*100):0;h1+=kpiCard('linear-gradient(90deg,var(--green),var(--teal))','Recompra',fmtP(pctRecompra),recompraN+' alunos','var(--green)');
   h1+='</div>';
 
   // Renovação de Acesso
@@ -527,9 +527,19 @@ function renderAll(rows){
   if(!conic)conic='var(--t3) 0deg 360deg';
   const ttTipo=taKeys.map(k=>k+': '+ta[k]+' ('+(taTotal>0?(ta[k]/taTotal*100).toFixed(1):0)+'%)').join(' · ');
   h1+='<div class="card"><h3>Tipo de Aluno</h3><div class="d">Distribuição por categoria</div><div class="donut-area"><div class="donut-ring" style="background:conic-gradient('+conic+')"><span class="tt">'+ttTipo+'</span><div style="width:120px;height:120px;background:var(--donut-hole);border-radius:50%;display:flex;align-items:center;justify-content:center"><div class="donut-center"><div class="donut-v" style="color:var(--accent)">'+fmtN(taTotal)+'</div><div class="donut-lbl">alunos</div></div></div></div><div class="donut-legend">'+legH+'</div></div></div>';
-  const smC=rows.filter(r=>r[R.PRODUTO]==='RegenX 🇫🇷').length;const svC=rows.filter(r=>r[R.PRODUTO]==='RegenX 🇪🇸').length;
-  const degProd=a.total>0?Math.round(smC/a.total*360):0;
-  h1+='<div class="card"><h3>Distribuição por Produto</h3><div class="d">Quantidade de alunos</div><div class="donut-area">'+donutHTML('var(--accent)',degProd,'var(--teal)',fmtP(a.total>0?rd(smC/a.total*100):0),'RegenX FR','RegenX FR: '+fmtN(smC)+' ('+fmtP(a.total>0?rd(smC/a.total*100):0)+') · RegenX ES: '+fmtN(svC)+' ('+fmtP(a.total>0?rd(svC/a.total*100):0)+')','RegenX 🇫🇷',fmtN(smC)+' ('+fmtP(a.total>0?rd(smC/a.total*100):0)+')','var(--accent)','RegenX ES',fmtN(svC)+' ('+fmtP(a.total>0?rd(svC/a.total*100):0)+')','var(--teal)')+'</div></div></div>';
+  // Dynamic product distribution
+  const prodCounts={};rows.forEach(r=>{const p=r[R.PRODUTO];if(p)prodCounts[p]=(prodCounts[p]||0)+1;});
+  const prodArr=Object.entries(prodCounts).sort((a,b)=>b[1]-a[1]);
+  const prodColors=['var(--accent)','var(--teal)','var(--gold)','#e17055','#6c5ce7'];
+  let degProd2=0;const conicProd=[];const legProd=[];
+  prodArr.forEach(([name,cnt],i)=>{
+    const pct=cnt/a.total*360;const color=prodColors[i%prodColors.length];
+    conicProd.push(color+' '+degProd2+'deg '+(degProd2+pct)+'deg');
+    legProd.push('<div class="donut-leg-item"><span class="dot" style="background:'+color+'"></span>'+name+' ('+fmtN(cnt)+' · '+fmtP(cnt/a.total*100)+')</div>');
+    degProd2+=pct;
+  });
+  const topProd=prodArr[0]||['',0];
+  h1+='<div class="card"><h3>Distribuição por Produto</h3><div class="d">Quantidade de alunos</div><div class="donut-area"><div class="donut-ring" style="background:conic-gradient('+conicProd.join(',')+')"><span class="tt">'+prodArr.map(p=>p[0]+': '+fmtN(p[1])+' ('+fmtP(p[1]/a.total*100)+')').join(' · ')+'</span><div style="width:120px;height:120px;background:var(--donut-hole);border-radius:50%;display:flex;align-items:center;justify-content:center"><div class="donut-center"><div class="donut-v" style="color:var(--accent)">'+fmtP(topProd[1]/a.total*100)+'</div><div class="donut-lbl">'+topProd[0].replace(/[^a-zA-Z ]/g,'').trim().split(' ')[0]+'</div></div></div></div><div class="donut-legend">'+legProd.join('')+'</div></div></div></div>';
 
   // Insights Visão Geral
   h1+='<div class="sec">💡 Insights — Visão Geral</div><div class="ins-g">';
@@ -549,13 +559,13 @@ function renderAll(rows){
   // Aulas
   h2+='<div class="card"><h3>Total de Aulas vs Média Assistida</h3>';
   if(isSingleProd){
-    const key=singleProd==='RegenX 🇫🇷'?'sm':'sv';const tA=moda(a.totalAulas[key]);const mA=rd(avg(a.aulasComp[key]));const pA=tA>0?mA/tA*100:0;
+    const key={'RegenX 🇫🇷':'p1','RegenX 🇪🇸':'p2','Insta Magnétik 🇫🇷':'p3','Insta Magnétik 🇪🇸':'p4'}[singleProd]||'p1';const tA=moda(a.totalAulas[key]);const mA=rd(avg(a.aulasComp[key]));const pA=tA>0?mA/tA*100:0;
     h2+='<div class="d">'+tA+' aulas · média '+mA.toFixed(1).replace('.',',')+' assistidas ('+pA.toFixed(1)+'%)</div>';
     h2+='<div class="hbar-area" style="height:auto;gap:24px"><div class="hbar-row"><span class="hbar-lbl">Total de Aulas</span><div class="hbar-track"><div class="hbar-fill" style="width:100%;background:var(--accent)">'+tA+' aulas</div></div></div>';
     h2+='<div class="hbar-row"><span class="hbar-lbl">Média Assistida</span><div class="hbar-track"><div class="hbar-fill" style="width:'+pA.toFixed(0)+'%;background:var(--teal)">'+mA.toFixed(1).replace('.',',')+' aulas ('+pA.toFixed(1)+'%)</div></div></div></div>';
   }else{
     h2+='<div class="d">Separado por produto</div><div class="hbar-area" style="height:auto;gap:20px">';
-    [['RegenX 🇫🇷','sm'],['RegenX 🇪🇸','sv']].forEach(([nome,k])=>{
+    [['RegenX 🇫🇷','p1'],['RegenX 🇪🇸','p2'],['Insta Magnétik 🇫🇷','p3'],['Insta Magnétik 🇪🇸','p4']].forEach(([nome,k])=>{
       const tA=moda(a.totalAulas[k]);const mA=rd(avg(a.aulasComp[k]));const pA=tA>0?mA/tA*100:0;
       h2+='<div style="font-size:13px;color:var(--a2);font-weight:600;margin-top:8px">'+nome+'</div>';
       h2+='<div class="hbar-row"><span class="hbar-lbl">Total de Aulas</span><div class="hbar-track"><div class="hbar-fill" style="width:100%;background:var(--accent)">'+tA+' aulas</div></div></div>';
@@ -566,7 +576,7 @@ function renderAll(rows){
 
   // Análise de Acesso — Tempo até o 1º Acesso
   h2+='<div class="sec">👁️ Análise de Acesso</div>';
-  const activRows=rows.filter(r=>r[R.TIPO_ALUNO]==='BUYER'&&(r[R.STATUS_COMPRA]==='COMPLETE'||r[R.STATUS_COMPRA]==='APPROVED'));
+  const activRows=rows.filter(r=>r[R.TIPO_ALUNO]==='BUYER'&&(r[R.STATUS_COMPRA]==='COMPLETE'||r[R.STATUS_COMPRA]==='APPROVED'||r[R.STATUS_COMPRA]==='Completo'||r[R.STATUS_COMPRA]==='Aprovado'));
   const actBuyers=activRows.length;const actDiffs=[];let actNever=0;
   activRows.forEach(r=>{if(!r[R.PRIM_ACESSO]||!r[R.ACESSOU]){actNever++;return;}if(!r[R.DT_COMPRA])return;const diff=Math.floor((r[R.PRIM_ACESSO]-r[R.DT_COMPRA])/86400000);if(diff<0)return;actDiffs.push(diff);});
   const actValid=actDiffs.length;const actD0c=actDiffs.filter(d=>d===0).length;const actD1c=actDiffs.filter(d=>d===1).length;const actD2c=actDiffs.filter(d=>d>=2).length;
@@ -604,66 +614,34 @@ function renderAll(rows){
   let h3='';
   // Faturamento por produto
   if(!isSingleProd){
-  const fatSM=rows.filter(r=>r[R.PRODUTO]==='RegenX 🇫🇷'&&r[R.VALOR]>0&&(r[R.STATUS_COMPRA]==='COMPLETE'||r[R.STATUS_COMPRA]==='APPROVED')).reduce((s,r)=>s+r[R.VALOR],0);
-  const fatSV=rows.filter(r=>r[R.PRODUTO]==='RegenX 🇪🇸'&&r[R.VALOR]>0&&(r[R.STATUS_COMPRA]==='COMPLETE'||r[R.STATUS_COMPRA]==='APPROVED')).reduce((s,r)=>s+r[R.VALOR],0);
-  const fatTotal=fatSM+fatSV;const degFat=fatTotal>0?Math.round(fatSM/fatTotal*360):0;
-  const pctFatSM=fatTotal>0?rd(fatSM/fatTotal*100):0;const pctFatSV=fatTotal>0?rd(fatSV/fatTotal*100):0;
-  h3+='<div class="sec">💎 Faturamento por Produto</div>';
-  h3+='<div class="g2"><div class="card"><h3>Representatividade de Faturamento</h3><div class="d">Receita por produto</div><div class="donut-area">'+donutHTML('var(--accent)',degFat,'var(--teal)',fmtEUR(fatTotal),'total','RegenX FR: '+fmtR(fatSM)+' ('+fmtP(pctFatSM)+') · RegenX ES: '+fmtR(fatSV)+' ('+fmtP(pctFatSV)+')','RegenX 🇫🇷',fmtR(fatSM),'var(--accent)','RegenX ES',fmtR(fatSV),'var(--teal)')+'</div></div>';
-  h3+='<div class="card"><h3>Detalhamento por Produto</h3><div class="d">Comparativo de receita</div><div class="hbar-area" style="height:auto;gap:28px">';
-  const mxFat=Math.max(fatSM,fatSV,1);
-  h3+='<div class="hbar-row"><span class="hbar-lbl">RegenX FR</span><div class="hbar-track"><div class="hbar-fill" style="width:'+Math.round(fatSM/mxFat*100)+'%;background:var(--accent)">'+fmtR(fatSM)+' ('+fmtP(pctFatSM)+')</div></div></div>';
-  h3+='<div class="hbar-row"><span class="hbar-lbl">RegenX ES</span><div class="hbar-track"><div class="hbar-fill" style="width:'+Math.round(fatSV/mxFat*100)+'%;background:var(--teal)">'+fmtR(fatSV)+' ('+fmtP(pctFatSV)+')</div></div></div>';
-  h3+='</div></div></div>';
-  }
-
-  // Financeiro
-  h3+='<div class="sec">💰 Financeiro</div><div class="g5">';
-  h3+='<div class="fin"><div class="fin-icon">💳</div><div class="fin-val" style="color:var(--green)">'+fmtR(f.compras_v)+'</div><div class="fin-label">Receita de Vendas</div><div class="fin-sub">'+f.compras_n+' compras</div></div>';
-  h3+='<div class="fin"><div class="fin-icon">↩️</div><div class="fin-val" style="color:var(--red)">'+fmtR(f.reembolso_v)+'</div><div class="fin-label">Reembolsos</div><div class="fin-sub">'+f.reembolso_n+' · '+fmtP(pctReemb)+'</div></div>';
-  if(f.chargeback_n>0)h3+='<div class="fin"><div class="fin-icon">⚠️</div><div class="fin-val" style="color:var(--orange)">'+fmtR(f.chargeback_v)+'</div><div class="fin-label">Chargebacks</div><div class="fin-sub">'+f.chargeback_n+'</div></div>';
-  if(f.cancelado_n>0)h3+='<div class="fin"><div class="fin-icon">🚫</div><div class="fin-val" style="color:var(--pink)">'+fmtR(f.cancelado_v)+'</div><div class="fin-label">Cancelamentos</div><div class="fin-sub">'+f.cancelado_n+'</div></div>';
-  h3+='<div class="fin"><div class="fin-icon">📉</div><div class="fin-val" style="color:var(--red)">'+fmtR(perda)+'</div><div class="fin-label">Perda Total</div><div class="fin-sub">'+fmtP(rd(pctPerda))+' da receita</div></div></div>';
-  const mxFin=Math.max(f.compras_v,perda,1);
-  h3+='<div class="g2" style="margin-top:24px"><div class="card"><h3>Compras vs Perdas</h3><div class="d">Comparativo financeiro</div><div class="chart"><div class="chart-bars"><div class="bar" style="height:95%;background:var(--green);flex:2"><span class="tt">Vendas: '+fmtR(f.compras_v)+'</span></div><div class="bar" style="height:'+Math.round(perda/mxFin*95)+'%;background:var(--red);flex:1"><span class="tt">Perdas: '+fmtR(perda)+'</span></div></div><div class="chart-labels"><div class="chart-lbl" style="flex:2">Vendas ('+fmtR(f.compras_v)+')</div><div class="chart-lbl" style="flex:1">Perdas ('+fmtR(perda)+')</div></div></div></div>';
-  h3+='<div class="card"><h3>Status Transações</h3><div class="d">Distribuição</div><div class="hbar-area"><div class="hbar-row"><span class="hbar-lbl">Aprovadas</span><div class="hbar-track"><div class="hbar-fill" style="width:'+(ttx>0?Math.round(f.compras_n/ttx*100):0)+'%;background:var(--green)">'+f.compras_n+'</div></div></div><div class="hbar-row"><span class="hbar-lbl">Reembolsos</span><div class="hbar-track"><div class="hbar-fill" style="width:'+(ttx>0?Math.max(Math.round(f.reembolso_n/ttx*100),2):0)+'%;background:var(--red)">'+f.reembolso_n+'</div></div></div></div></div></div>';
-
-  // Reembolso tendência
-  const recV=f.compras_v||1;
-  h3+='<div class="sec">📉 Reembolso — Tendência</div><div class="g3">';
-  [[a.reemb30,'30 dias','var(--green)'],[a.reemb60,'60 dias','var(--gold)'],[a.reemb90,'90 dias','var(--red)']].forEach(([rb,label,color])=>{
-    const pct=rd(recV>0?rb.v/recV*100:0);
-    h3+='<div class="trend-card" style="border-top:4px solid '+color+'"><div style="font-size:14px;font-weight:600;color:var(--t2)">Últimos '+label+'</div><div style="font-size:13px;color:var(--t3)">reembolsos no período</div><div class="trend-val" style="color:'+color+'">'+rb.n+'</div><div class="trend-money" style="color:'+color+'">'+fmtR(rb.v)+'</div><span class="trend-pct" style="background:'+color+'22;color:'+color+'">'+fmtP(pct)+' da receita</span></div>';
-  });h3+='</div>';
-
-  // Cross-sell (ALWAYS visible)
-  const allSM=new Set(),allSV=new Set(),progAll2={},acessosAll2={},dtAprovAll2={};
-  RAW_DATA.forEach(r=>{
-    if(r[R.EMAIL]){
-      if(r[R.PRODUTO]==='RegenX 🇫🇷'){allSM.add(r[R.EMAIL]);if(!dtAprovAll2[r[R.EMAIL]])dtAprovAll2[r[R.EMAIL]]={};if(r[R.DT_COMPRA])dtAprovAll2[r[R.EMAIL]]['RegenX 🇫🇷']=r[R.DT_COMPRA];}
-      if(r[R.PRODUTO]==='RegenX 🇪🇸'){allSV.add(r[R.EMAIL]);if(!dtAprovAll2[r[R.EMAIL]])dtAprovAll2[r[R.EMAIL]]={};if(r[R.DT_COMPRA])dtAprovAll2[r[R.EMAIL]]['RegenX 🇪🇸']=r[R.DT_COMPRA];}
-      if(r[R.PROG]!==null){if(!progAll2[r[R.EMAIL]])progAll2[r[R.EMAIL]]={};const prev=progAll2[r[R.EMAIL]][r[R.PRODUTO]];if(prev===undefined||r[R.PROG]>prev)progAll2[r[R.EMAIL]][r[R.PRODUTO]]=r[R.PROG];}
-      if(r[R.QTD_ACESSOS]!==null&&r[R.QTD_ACESSOS]>=0){if(!acessosAll2[r[R.EMAIL]])acessosAll2[r[R.EMAIL]]={};acessosAll2[r[R.EMAIL]][r[R.PRODUTO]]=r[R.QTD_ACESSOS];}
+  // Dynamic faturamento for all products
+  const fatProd={};
+  rows.forEach(r=>{
+    if(r[R.VALOR]>0&&(r[R.STATUS_COMPRA]==='COMPLETE'||r[R.STATUS_COMPRA]==='APPROVED'||r[R.STATUS_COMPRA]==='Completo'||r[R.STATUS_COMPRA]==='Aprovado')){
+      const p=r[R.PRODUTO]||'Outros';
+      if(!fatProd[p])fatProd[p]=0;
+      fatProd[p]+=r[R.VALOR];
     }
   });
-  let crossN=0;const crossProgs2=[],crossAcessos2=[],crossDays2=[];
-  allSV.forEach(e=>{if(allSM.has(e)){crossN++;if(progAll2[e]&&progAll2[e]['RegenX 🇫🇷']!==undefined)crossProgs2.push(progAll2[e]['RegenX 🇫🇷']);if(acessosAll2[e]&&acessosAll2[e]['RegenX 🇫🇷']!==undefined)crossAcessos2.push(acessosAll2[e]['RegenX 🇫🇷']);if(dtAprovAll2[e]&&dtAprovAll2[e]['RegenX 🇫🇷']&&dtAprovAll2[e]['RegenX 🇪🇸']){const diff=Math.floor((dtAprovAll2[e]['RegenX 🇪🇸']-dtAprovAll2[e]['RegenX 🇫🇷'])/86400000);if(diff>=0)crossDays2.push(diff);}}});
-  const smT=allSM.size,svT=allSV.size;const avgCross2=crossProgs2.length?rd(avg(crossProgs2)):0;const avgCrossAc2=crossAcessos2.length?rd(avg(crossAcessos2)):0;
-  const potencial=smT-crossN;const pctPot=smT>0?rd(potencial/smT*100):0;
-  let medDays=0;if(crossDays2.length){const sorted=[...crossDays2].sort((a,b)=>a-b);const mid=Math.floor(sorted.length/2);medDays=sorted.length%2?sorted[mid]:Math.round((sorted[mid-1]+sorted[mid])/2);}
-  const w60=crossDays2.filter(d=>d<=60).length;const pW60=crossDays2.length>0?rd(w60/crossDays2.length*100):0;
-
-  h3+='<div class="sec">🔄 Oportunidade entre Produtos</div><div class="g2">';
-  h3+='<div class="rc"><h3>Cross-sell RegenX FR → RegenX ES <span class="rc-badge conv">Conversão</span></h3>';
-  h3+='<div class="rc-row"><span class="rc-l">Alunos RegenX FR que compraram RegenX ES</span><span class="rc-v" style="color:var(--teal)">'+crossN+'</span></div>';
-  h3+='<div class="rc-row"><span class="rc-l">% de cross-sell</span><span class="rc-v" style="color:var(--teal)">'+fmtP(smT>0?rd(crossN/smT*100):0)+'</span></div>';
-  h3+='<div class="rc-potencial"><span class="rc-l">Potencial restante</span><span class="rc-v" style="color:var(--gold)">'+fmtN(potencial)+' <small style="font-size:12px;font-weight:400;color:var(--t2)">('+fmtP(pctPot)+')</small></span></div></div>';
-  h3+='<div class="rc" style="background:linear-gradient(135deg,var(--card) 0%,rgba(45,212,191,.04) 100%);border-color:rgba(45,212,191,.15)"><h3 style="color:var(--teal)">Quem compra o RegenX ES <span class="rc-badge perf">Perfil</span></h3>';
-  h3+='<div class="rc-row"><span class="rc-l">Progresso médio no RegenX FR</span><span class="rc-v" style="color:var(--teal)">'+fmtP(avgCross2)+'</span></div>';
-  h3+='<div class="rc-row"><span class="rc-l">Média de acessos no RegenX FR</span><span class="rc-v" style="color:var(--teal)">'+avgCrossAc2.toFixed(1).replace('.',',')+'</span></div>';
-  h3+='<div class="rc-row"><span class="rc-l">Tempo médio até o cross-sell</span><span class="rc-v" style="color:var(--gold)">'+medDays+' <small style="font-size:12px;font-weight:400;color:var(--t2)">dias (mediana)</small></span></div>';
-  if(pW60>0)h3+='<div class="rc-alert">⚡ '+fmtP(pW60)+' compram nos primeiros 60 dias — janela ideal de abordagem</div>';
-  h3+='</div></div>';
+  const fatArr=Object.entries(fatProd).sort((a,b)=>b[1]-a[1]);
+  const fatTotal=fatArr.reduce((s,f)=>s+f[1],0);
+  const fatColors=['var(--accent)','var(--teal)','var(--gold)','#e17055','#6c5ce7'];
+  let degFatD=0;const conicFat=[];const legFat=[];
+  fatArr.forEach(([name,val],i)=>{
+    const pct=val/fatTotal*360;const color=fatColors[i%fatColors.length];
+    conicFat.push(color+' '+degFatD+'deg '+(degFatD+pct)+'deg');
+    legFat.push('<div class="donut-leg-item"><span class="dot" style="background:'+color+'"></span>'+name+' ('+fmtR(val)+' · '+fmtP(val/fatTotal*100)+')</div>');
+    degFatD+=pct;
+  });
+  if(fatArr.length>1){
+  h3+='<div class="g2"><div class="card"><h3>Representatividade de Faturamento</h3><div class="d">Receita por produto</div><div class="donut-area"><div class="donut-ring" style="background:conic-gradient('+conicFat.join(',')+')"><span class="tt">'+fatArr.map(f=>f[0]+': '+fmtR(f[1])).join(' · ')+'</span><div style="width:120px;height:120px;background:var(--donut-hole);border-radius:50%;display:flex;align-items:center;justify-content:center"><div class="donut-center"><div class="donut-v" style="color:var(--accent)">'+fmtEUR(fatTotal)+'</div><div class="donut-lbl">total</div></div></div></div><div class="donut-legend">'+legFat.join('')+'</div></div></div>';
+  h3+='<div class="card"><h3>Comparativo de Receita</h3><div class="d">Barras proporcionais</div>';
+  const mxFat=fatArr[0]?fatArr[0][1]:1;
+  fatArr.forEach(([name,val],i)=>{
+    const pctW=Math.round(val/mxFat*100);
+    h3+='<div class="hbar-row"><span class="hbar-lbl">'+name.replace(/[🇫🇷🇪🇸]/g,'').trim()+'</span><div class="hbar-track"><div class="hbar-fill" style="width:'+pctW+'%;background:'+fatColors[i%fatColors.length]+'">'+fmtR(val)+' ('+fmtP(val/fatTotal*100)+')</div></div></div>';
+  });
+  h3+='</div></div>';}
 
   // Insights Financeiro
   h3+='<div class="sec">💡 Insights — Financeiro</div><div class="ins-g">';
@@ -794,11 +772,19 @@ function renderPF(pfData){
   
   if(mesArr.length>0){
     var maxMes=Math.max.apply(null,mesArr.map(function(m){return m.val}));
-    h+='<div class="card"><h3>📈 Evolução Mensal</h3><div class="d">Pedidos por mês</div>';
-    h+='<div class="chart-area" style="margin-top:16px">';
-    mesArr.forEach(function(m){
+    var totalPed=mesArr.reduce(function(s,m){return s+m.val},0);
+    var avgPed=Math.round(totalPed/mesArr.length);
+    h+='<div class="card"><h3>📈 Evolução Mensal de Pedidos</h3><div class="d">'+mesArr.length+' meses · Média: '+avgPed+' pedidos/mês · Total: '+fmtN(totalPed)+'</div>';
+    h+='<div style="display:flex;align-items:flex-end;gap:6px;height:220px;margin-top:20px;padding:0 4px">';
+    mesArr.forEach(function(m,i){
       var pct=m.val/maxMes*100;
-      h+='<div class="chart-col"><div class="chart-bar-wrap"><span class="chart-val">'+m.val+'</span><div class="chart-bar" style="height:'+pct+'%;background:var(--accent)"></div></div><span class="chart-lbl">'+m.label+'</span></div>';
+      var isMax=m.val===maxMes;
+      var grad=isMax?'linear-gradient(180deg,var(--gold),#e17055)':'linear-gradient(180deg,var(--accent),#6c5ce7)';
+      h+='<div style="flex:1;display:flex;flex-direction:column;align-items:center;gap:4px">';
+      h+='<span style="font-family:JetBrains Mono;font-size:11px;font-weight:700;color:'+(isMax?'var(--gold)':'var(--accent)')+'">'+m.val+'</span>';
+      h+='<div style="width:100%;height:'+pct+'%;background:'+grad+';border-radius:8px 8px 4px 4px;min-height:4px;transition:height .6s"></div>';
+      h+='<span style="font-size:10px;color:var(--sub);white-space:nowrap">'+m.label+'</span>';
+      h+='</div>';
     });
     h+='</div></div>';
   }
